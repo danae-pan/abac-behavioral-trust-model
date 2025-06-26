@@ -1,0 +1,703 @@
+{
+    "policies": [
+        {
+            "uid": "policy-1-regional-admin-edit-student-enrollment-county",
+            "description": "Admin from the same county can maintain (view & edit) student enrollment with trust >= 1.0",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Admin"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 1.0
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student enrollment"
+                    },
+                    "$.county_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.county_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "IsIn",
+                        "values": [
+                            "view",
+                            "edit"
+                        ]
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-2-regional-admin-edit-student-enrollment-district",
+            "description": "Admin from the same district can maintain (view & edit) student enrollment with trust >= 1.0",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Admin"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 1.0
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student enrollment"
+                    },
+                    "$.district_id": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.district_id"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "IsIn",
+                        "values": [
+                            "view",
+                            "edit"
+                        ]
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-3-academic-and-nominated-admin-view-and-maintain-student-course-enrollment",
+            "description": "Academic and nominated admin can view and maintain (view & edit & delete) student course enrollment with trust >= 0.7",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Admin"
+                    },
+                    "$.position": {
+                        "condition": "AllIn",
+                        "values": ["Nominated", "Academic"]
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "course enrollment"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "IsIn",
+                        "values": [
+                            "view",
+                            "edit",
+                            "delete"
+                        ]
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-4-admin-view-edit-delete-course-enrollment-county",
+            "description": "Admin from the same county can view & edit & delete student course enrollment with trust >= 0.7",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Admin"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "course enrollment"
+                    },
+                    "$.county_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.county_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "IsIn",
+                        "values": [
+                            "view",
+                            "edit",
+                            "delete"
+                        ]
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-5-admin-view-edit-delete-course-enrollment-district",
+            "description": "Admin from the same district can view & edit & delete student course enrollment with trust >= 0.7",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Admin"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "course enrollment"
+                    },
+                    "$.district_id": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.district_id"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "IsIn",
+                        "values": [
+                            "view",
+                            "edit",
+                            "delete"
+                        ]
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-6-tenured-teacher-view-record-of-students-same-school",
+            "description": "Teachers can view the student records for students in the same school if he has a tenured position and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Tenured"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-7-tenured-teacher-view-record-of-students-same-course-code",
+            "description": "Teachers can view the student records for students in the same school if he has a tenured position and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Tenured"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+        
+        {
+            "uid": "policy-8-tenured-teacher-view-record-of-students-same-class-id",
+            "description": "Teachers can view the student records for students in the same class id if he has a tenured position and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Tenured"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.class_id": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.class_id"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-9-long-term-teacher-view-record-of-students-same-school",
+            "description": "Teachers can view the student records for students in the same school if he has a long term and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Long Term"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-10-long-term-teacher-view-record-of-students-same-course-code",
+            "description": "Teachers can view the student records for students for the same course code if he has a long term position and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Long Term"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.course_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.course_code"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-11-long-term-teacher-view-record-of-students-same-class-id",
+            "description": "Teachers can view the student records for students for the same class id if he has a long term position and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Long Term"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.class_id": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.class_id"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-12-probationary-teacher-view-record-of-students-same-school",
+            "description": "Teachers can view the student records for students for the same school if he has a probationary position and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Probationary"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-14-probationary-teacher-view-record-of-students-same-course-code",
+            "description": "Teachers can view the student records for students for the same course code if he has a probationary position and trust >= 0.7.",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Teacher"
+                    },
+                    "$.position": {
+                        "condition": "Equals",
+                        "value": "Probationary"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "student records"
+                    },
+                    "$.course_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.course_code"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "view"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-15-student-access-course-material-if-enrolled",
+            "description": "Student can access course material if enrolled to the course and with trust 0.7",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Student"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 1.0
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "course material"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    },
+                    "$.course_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.course_code"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "access"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-16-student-submit-assignment",
+            "description": "Student can submit assignment if the file has been created and he is enrolled to the course with trust >= 1.0",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Student"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 1.0
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "course assignment"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    },
+                    "$.course_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.course_code"
+                    },
+                    "$.file_created": {
+                        "condition": "Exists"
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "submit"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        },
+
+        {
+            "uid": "policy-17-student-enroll-to-course",
+            "description": "Student can enroll to a course if seats are available and trust >= 0.7",
+            "effect": "allow",
+            "rules": {
+                "subject": {
+                    "$.role": {
+                        "condition": "Equals",
+                        "value": "Student"
+                    },
+                    "$.trust_value": {
+                        "condition": "Gte",
+                        "value": 0.7
+                    }
+                },
+                "resource": {
+                    "$.obj_type": {
+                        "condition": "Equals",
+                        "value": "course enrollment"
+                    },
+                    "$.school_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.school_code"
+                    },
+                    "$.course_code": {
+                        "condition": "IsInAttribute",
+                        "ace": "subject",
+                        "path": "$.course_code"
+                    },
+                    "$.remaining_seats": {
+                        "condition": "Gt",
+                        "value": 0
+                    }
+                },
+                "action": {
+                    "$.method": {
+                        "condition": "Equals",
+                        "value": "enroll"
+                    }
+                },
+                "context": {}
+            },
+            "targets": {},
+            "priority": 0
+        }    
+        
+    ]
+}
