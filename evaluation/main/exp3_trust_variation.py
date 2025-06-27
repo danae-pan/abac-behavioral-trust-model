@@ -14,7 +14,7 @@ BASE = Path(__file__).resolve().parents[2]
 
 POLICY_PATH = BASE / "request_builder" / "policy.json"
 SUBJECTS_PATH = BASE / "datasets" / "processed" / "all_subjects.json"
-TRUST_RECORDS_PATH = BASE / "datasets" / "processed" / "trust_estimator" / "trust_records_fahp_random_params.json"
+TRUST_RECORDS_PATH = BASE / "datasets" / "processed" / "trust_estimator" / "trust_records_fahp_risk_profiles.json"
 REQUESTS_PATH = BASE / "datasets" / "processed" / "access_requests.json"
 
 # Load ABAC policies
@@ -76,11 +76,11 @@ def get_denial_rate(reqs):
     denied = sum(1 for r in reqs if not pdp.is_allowed(Request.from_json(r)))
     return denied / len(reqs) if reqs else 0.0
 
-print(f"\n🔍 Request Counts:")
+print(f"Request Counts:")
 print(f"  Trust ↑ Requests: {len(reqs_inc_initial)}")
 print(f"  Trust ↓ Requests: {len(reqs_dec_initial)}")
 
-print(f"\n🧪 Subject Counts:")
+print(f"Subject Counts:")
 print(f"  Trust ↑ Subjects: {len(increased_ids)}")
 print(f"  Trust ↓ Subjects: {len(decreased_ids)}")
 
