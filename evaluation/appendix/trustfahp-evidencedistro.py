@@ -107,9 +107,9 @@ def sample_evidence_for_profile(profile):
     """Generate 18 evidence values based on subject profile and Beta distribution skew."""
     evidence = []
     for _ in range(18):
-        if profile == "benign":
+        if profile == "malicious":
             alpha, beta = random.uniform(6, 9), random.uniform(0.8, 1.2)
-        elif profile == "malicious":
+        elif profile == "benign":
             alpha, beta = random.uniform(0.8, 1.2), random.uniform(6, 9)
         else:
             alpha = beta = random.uniform(1.5, 6)
