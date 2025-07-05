@@ -5,15 +5,26 @@ import matplotlib.pyplot as plt
 import random
 from pathlib import Path
 
-# -----------------------------------------
-# Trust Simulation with Skewed Risk Profiles
-# -----------------------------------------
-# This script simulates dynamic trust evolution using FAHP weights, random risk profiles, 
-# and evidence values drawn from Beta distributions. The profiles (benign, malicious, neutral)
-# influence the alpha/beta parameters used to generate behavioral evidence, leading to 
-# personalized and evolving trust scores over time.
+"""
+trustfahp-evidencedistro.py
 
-# Labels and polarity flags for each behavioral evidence dimension
+Simulates trust evolution using FAHP and subject-specific risk profiles.
+Each subject is randomly assigned a risk label (benign, malicious, or neutral),
+which shapes the behavioral evidence generated over time via Beta distributions.
+
+Inputs:
+- datasets/processed/all_subjects.json (initial trust values)
+
+Outputs:
+- trust_estimator/trust_records_fahp_risk_profiles.json: trust values over time
+- trust_estimator/subject_risk_profiles.json: assigned risk profile per subject
+- plots/trust_evolution_risk_profiles.png: 100-subject trajectory plot
+"""
+
+
+# ----------------------
+# 1. Evidence Labels and Polarity
+# ----------------------
 evidence_labels = [
     "Average user CPU Utilization", "Average user throughput", "Average IP packet transmission delay",
     "Average IP packet delay jitter time", "Average IP packet network bandwidth occupancy",
@@ -31,16 +42,9 @@ evidence_polarity = [
     False, False, False, False, False, False, False, False
 ]
 
-def invert_polarity(evidence: np.ndarray, polarity_flags: list) -> np.ndarray:
-    """Invert polarity for evidence dimensions where higher values are beneficial."""
-    modified = evidence.copy()
-    for idx, invert in enumerate(polarity_flags):
-        if invert:
-            max_val = np.max(modified[:, idx])
-            min_val = np.min(modified[:, idx])
-            modified[:, idx] = (max_val + min_val) - modified[:, idx]
-    return modified
-
+# ----------------------
+# 2. FAHP Utilities
+# ----------------------
 def compute_synthetic_extents(matrix):
     """Compute fuzzy synthetic extents from TFN comparison matrix."""
     row_sums = [sum(matrix[i, :], start=TFN(0, 0, 0)) for i in range(matrix.shape[0])]
@@ -67,10 +71,23 @@ def compute_final_weights(synthetic_extents):
     d_prime = np.min(V + np.eye(n), axis=1)
     return d_prime / np.sum(d_prime)
 
-def create_dummy_fuzzy_matrix(size: int):
+def create_uniform_matrix(size: int):
     """Create an identity fuzzy comparison matrix with TFN(1,1,1) values."""
     return np.array([[TFN(1, 1, 1) for _ in range(size)] for _ in range(size)])
 
+def invert_polarity(evidence: np.ndarray, polarity_flags: list) -> np.ndarray:
+    """Invert polarity for evidence dimensions where higher values are beneficial."""
+    modified = evidence.copy()
+    for idx, invert in enumerate(polarity_flags):
+        if invert:
+            max_val = np.max(modified[:, idx])
+            min_val = np.min(modified[:, idx])
+            modified[:, idx] = (max_val + min_val) - modified[:, idx]
+    return modified
+
+# ----------------------
+# 3. Trust Simulation 
+# ----------------------
 def update_trust(prev_trust, evidence, weights, gamma=0.85):
     """Apply exponential trust update formula using FAHP weights and new evidence."""
     T_new = 1 - np.dot(weights, evidence)
@@ -91,15 +108,14 @@ def sample_evidence_for_profile(profile):
     evidence = []
     for _ in range(18):
         if profile == "benign":
-            alpha, beta = random.uniform(6, 9), random.uniform(1.1, 2)
+            alpha, beta = random.uniform(6, 9), random.uniform(0.8, 1.2)
         elif profile == "malicious":
-            alpha, beta = random.uniform(1.1, 2), random.uniform(6, 9)
+            alpha, beta = random.uniform(0.8, 1.2), random.uniform(6, 9)
         else:
             alpha = beta = random.uniform(1.5, 6)
         val = np.clip(np.random.beta(alpha, beta), 0, 1)
         evidence.append(val)
     return evidence
-
 
 def simulate_trust(subjects, global_weights, initial_trust_map, months=12, gamma=0.85):
     """
@@ -125,6 +141,7 @@ def simulate_trust(subjects, global_weights, initial_trust_map, months=12, gamma
 
     return trust_records, profile_map
 
+# -------------------- ENTRY POINT --------------------
 if __name__ == "__main__":
     # Reproducibility setup
     np.random.seed(0)
@@ -134,17 +151,19 @@ if __name__ == "__main__":
     SUBJECTS_PATH = ROOT / "datasets" / "processed" / "all_subjects.json"
     OUTPUT_DIR = ROOT / "datasets" / "processed" / "trust_estimator"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
+    PLOTS_DIR = ROOT / "plots"
+    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    
     with open(SUBJECTS_PATH, encoding="utf-8") as f:
         subjects = json.load(f)
 
     initial_trust_map = {s["subject_id"]: s["trust_value"] for s in subjects}
 
     # Use dummy FAHP weights for three main criteria: performance, reliability, security
-    perf = create_dummy_fuzzy_matrix(6)
-    reli = create_dummy_fuzzy_matrix(4)
-    sec = create_dummy_fuzzy_matrix(8)
-    crit = create_dummy_fuzzy_matrix(3)
+    perf = create_uniform_matrix(6)
+    reli = create_uniform_matrix(4)
+    sec = create_uniform_matrix(8)
+    crit = create_uniform_matrix(3)
 
     global_weights = np.concatenate([
         compute_final_weights(compute_synthetic_extents(perf)) * compute_final_weights(compute_synthetic_extents(crit))[0],
@@ -152,7 +171,6 @@ if __name__ == "__main__":
         compute_final_weights(compute_synthetic_extents(sec)) * compute_final_weights(compute_synthetic_extents(crit))[2],
     ])
 
-    # Run simulation and save results
     trust_records, profile_map = simulate_trust(subjects, global_weights, initial_trust_map)
 
     with open(OUTPUT_DIR / "trust_records_fahp_risk_profiles.json", "w") as f:
@@ -173,7 +191,6 @@ if __name__ == "__main__":
     print(f"  Avg Increased Trust:            {np.mean(increased) if increased else 0:.4f}")
     print(f"  Avg Decreased Trust:            {np.mean(decreased) if decreased else 0:.4f}")
 
-    # Visualize sample of subject trust trajectories
     plt.figure(figsize=(10, 6))
     for i, (sid, history) in enumerate(trust_records.items()):
         if i >= 100:
@@ -185,4 +202,7 @@ if __name__ == "__main__":
     plt.ylim(0, 1)
     plt.xlim(0, 12)
     plt.tight_layout()
-    plt.show()
+    plot_path = PLOTS_DIR / "trust_evolution_risk_profiles.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+    print(f"Saved: {plot_path}")
+

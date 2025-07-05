@@ -3,11 +3,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 from pyfdm.TFN import TFN
-from pyfdm.methods import utils
 from pathlib import Path
 
+"""
+trustfahp-betadistro.py
+
+Simulates trust evolution using FAHP with category-specific Beta distributions.
+Evidence for performance, reliability, and security is generated using asymmetric Beta parameters
+to model skewed behavioral patterns per category.
+
+Inputs:
+- datasets/processed/all_subjects.json (with initial trust values)
+
+Outputs:
+- trust_estimator/trust_records_fahp_evidence_category_model.json: trust values over time
+- trust_estimator/trust_subject_evidence_category_params.json: per-subject Beta parameters
+- plots/trust_evolution_100_subjects.png: trust trajectories for 100 subjects
+- plots/evidence_per_category_over_time.png: average evidence per category (line plot)
+- plots/evidence_distribution_per_category.png: category-specific histograms
+"""
+
+
 # ----------------------
-# Evidence Metadata
+# 1. Evidence Labels, Polarity and Category Skewness
 # ----------------------
 evidence_labels = [
     "Average user CPU Utilization", "Average user throughput", "Average IP packet transmission delay",
@@ -33,23 +51,20 @@ category_skewness = {
 }
 
 # ----------------------
-# FAHP Utilities
+# 2. FAHP Utilities
 # ----------------------
-def invert_polarity(evidence, polarity_flags):
-    modified = evidence.copy()
-    for idx, invert in enumerate(polarity_flags):
-        if invert:
-            max_val = np.max(modified[:, idx])
-            min_val = np.min(modified[:, idx])
-            modified[:, idx] = (max_val + min_val) - modified[:, idx]
-    return modified
-
 def compute_synthetic_extents(matrix):
+    """
+    Computes fuzzy synthetic extent values from a fuzzy pairwise comparison matrix.
+    """
     row_sums = [sum(matrix[i, :], start=TFN(0, 0, 0)) for i in range(matrix.shape[0])]
     total_sum = sum(row_sums, start=TFN(0, 0, 0))
     return [r / total_sum for r in row_sums]
 
 def possibility_degree(m2, m1):
+    """
+    Computes the possibility degree that fuzzy number m2 ≥ m1.
+    """
     if m2.b >= m1.b:
         return 1.0
     elif m1.a >= m2.c:
@@ -58,6 +73,9 @@ def possibility_degree(m2, m1):
         return (m1.a - m2.c) / ((m2.b - m2.c) - (m1.b - m1.a))
 
 def compute_final_weights(synthetic_extents):
+    """
+    Computes crisp weights from fuzzy synthetic extents using the minimum possibility method.
+    """
     n = len(synthetic_extents)
     V = np.zeros((n, n))
     for i in range(n):
@@ -67,13 +85,37 @@ def compute_final_weights(synthetic_extents):
     d_prime = np.min(V + np.eye(n), axis=1)
     return d_prime / np.sum(d_prime)
 
-def create_dummy_fuzzy_matrix(size):
+def create_uniform_matrix(size):
+    """
+    Creates a size×size identity fuzzy matrix filled with TFN(1,1,1).
+    Used to generate equal weights when no specific pairwise comparisons are provided.
+    """
     return np.array([[TFN(1, 1, 1) for _ in range(size)] for _ in range(size)])
 
 # ----------------------
-# Trust Calculation Logic
+# 3. Trust Simulation 
 # ----------------------
+
+def invert_polarity(evidence, polarity_flags):
+    """
+    Inverts evidence dimensions where higher values indicate better behavior,
+    so that all dimensions align with the intuition: higher = more suspicious.
+    """
+    modified = evidence.copy()
+    for idx, invert in enumerate(polarity_flags):
+        if invert:
+            max_val = np.max(modified[:, idx])
+            min_val = np.min(modified[:, idx])
+            modified[:, idx] = (max_val + min_val) - modified[:, idx]
+    return modified
+
 def generate_categorized_beta_evidence(subject_params):
+    """
+    Generates an 18-dimensional evidence vector using category-specific Beta distributions.
+
+    Each category (performance, reliability, security) has its own (α, β) parameters,
+    and evidence is sampled accordingly.
+    """
     evidence = np.zeros(18)
     for category in subject_params:
         alpha, beta = subject_params[category]
@@ -86,10 +128,19 @@ def generate_categorized_beta_evidence(subject_params):
     return np.clip(evidence, 0, 1)
 
 def update_trust(prev_trust, evidence, weights, gamma=0.85):
+    """
+    Updates trust using exponential smoothing on weighted evidence scores.
+    T_new = 1 - dot(weights, evidence)
+    """
     T_new = 1 - np.dot(weights, evidence)
     return gamma * prev_trust + (1 - gamma) * np.clip(T_new, 0, 1)
 
 def simulate_trust(subjects, weights, initial_trust_map, months=12, gamma=0.85):
+    """Simulates trust evolution over time using FAHP and skewed Beta evidence.
+
+    Each subject is assigned category-specific (α, β) parameters. Evidence is sampled
+    monthly and used to update trust. Category-wise evidence history is recorded.
+    """
     trust_records = {}
     subject_params = {}
 
@@ -99,10 +150,10 @@ def simulate_trust(subjects, weights, initial_trust_map, months=12, gamma=0.85):
         subject_params[sid] = {}
 
         for category in category_skewness:
-            if category_skewness[category] == "right":
+            if category_skewness[category] == "left":
                 alpha = round(random.uniform(3, 6), 1)
                 beta = round(random.uniform(1.5, 3), 1)
-            elif category_skewness[category] == "left":
+            elif category_skewness[category] == "right":
                 alpha = round(random.uniform(1.5, 3), 1)
                 beta = round(random.uniform(3, 6), 1)
             else:
@@ -131,9 +182,7 @@ def simulate_trust(subjects, weights, initial_trust_map, months=12, gamma=0.85):
 
     return trust_records, subject_params, category_evidence_history
 
-# ----------------------
-# Main Execution
-# ----------------------
+# -------------------- ENTRY POINT --------------------
 if __name__ == "__main__":
     np.random.seed(0)
     random.seed(0)
@@ -142,16 +191,19 @@ if __name__ == "__main__":
     INPUT_PATH = ROOT / "datasets" / "processed" / "all_subjects.json"
     OUTPUT_DIR = ROOT / "datasets" / "processed" / "trust_estimator"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    PLOTS_DIR = ROOT / "plots"
+    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
     with open(INPUT_PATH, "r") as f:
         subjects = json.load(f)
 
     initial_trust_map = {s["subject_id"]: s["trust_value"] for s in subjects}
 
-    perf = create_dummy_fuzzy_matrix(6)
-    reli = create_dummy_fuzzy_matrix(4)
-    sec = create_dummy_fuzzy_matrix(8)
-    crit = create_dummy_fuzzy_matrix(3)
+    perf = create_uniform_matrix(6)
+    reli = create_uniform_matrix(4)
+    sec = create_uniform_matrix(8)
+    crit = create_uniform_matrix(3)
 
     global_weights = np.concatenate([
         compute_final_weights(compute_synthetic_extents(perf)) * compute_final_weights(compute_synthetic_extents(crit))[0],
@@ -184,7 +236,10 @@ if __name__ == "__main__":
     plt.ylim(0, 1)
     plt.xlim(0, 12)
     plt.tight_layout()
-    plt.show()
+    plot_path = PLOTS_DIR / "trust_evolution_100_subjects.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+    print(f"Saved: {plot_path}")
+
 
     # Evidence average per category over time
     plt.figure(figsize=(10, 6))
@@ -199,7 +254,10 @@ if __name__ == "__main__":
     plt.grid(True, linestyle="--", alpha=0.5)
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    plot_path = PLOTS_DIR / "evidence_per_category_over_time.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+    print(f"Saved: {plot_path}")
+
 
     # Evidence distribution histogram
     plt.figure(figsize=(10, 6))
@@ -212,4 +270,7 @@ if __name__ == "__main__":
     plt.ylabel("Frequency")
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    plot_path = PLOTS_DIR / "evidence_distribution_per_category.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+    print(f"Saved: {plot_path}")
+

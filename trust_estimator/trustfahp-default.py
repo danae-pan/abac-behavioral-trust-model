@@ -4,8 +4,33 @@ import json
 import matplotlib.pyplot as plt
 import random
 from pathlib import Path
+from pyfdm.methods import utils
 
-# Labels and polarity flags for each behavioral evidence dimension
+"""
+trustfahp-default.py
+
+Simulates trust evolution using a Fuzzy Analytic Hierarchy Process (FAHP) model.
+Each subject is assigned random Beta distribution parameters to generate monthly
+behavioral evidence, which is used to update trust scores via exponential smoothing.
+
+Weights are derived from identity TFN matrices for the performance, reliability, and
+security criteria. The model supports polarity-aware evidence inversion and logs
+trust trajectories over a 12-month simulation.
+
+Usage:
+- Expects processed subject dataset with initial trust values.
+- Saves trust histories and evidence generation parameters to disk.
+- Generates a trust evolution plot for the first 100 subjects.
+
+Outputs:
+- trust_records_fahp_random_params.json: monthly trust values for each subject.
+- trust_subject_beta_params.json: α, β parameters for evidence generation.
+- plots/trust_evolution_random.png: line chart of trust trajectories.
+"""
+
+# ----------------------
+# 1. Evidence Labels and Polarity
+# ----------------------
 evidence_labels = [
     "Average user CPU Utilization", "Average user throughput", "Average IP packet transmission delay",
     "Average IP packet delay jitter time", "Average IP packet network bandwidth occupancy",
@@ -23,19 +48,9 @@ evidence_polarity = [
     False, False, False, False, False, False, False, False
 ]
 
-def invert_polarity(evidence: np.ndarray, polarity_flags: list) -> np.ndarray:
-    """
-    Inverts evidence dimensions where higher values indicate better behavior,
-    so that all dimensions align with the intuition: higher = more suspicious.
-    """
-    modified = evidence.copy()
-    for idx, invert in enumerate(polarity_flags):
-        if invert:
-            max_val = np.max(modified[:, idx])
-            min_val = np.min(modified[:, idx])
-            modified[:, idx] = (max_val + min_val) - modified[:, idx]
-    return modified
-
+# -------------------------------
+# 2. FAHP Utilities
+# -------------------------------
 def compute_synthetic_extents(matrix):
     """
     Computes fuzzy synthetic extent values from a fuzzy pairwise comparison matrix.
@@ -68,12 +83,59 @@ def compute_final_weights(synthetic_extents):
     d_prime = np.min(V + np.eye(n), axis=1)
     return d_prime / np.sum(d_prime)
 
-def create_dummy_fuzzy_matrix(size: int):
+def create_uniform_matrix(size: int):
     """
     Creates a size×size identity fuzzy matrix filled with TFN(1,1,1).
     Used to generate equal weights when no specific pairwise comparisons are provided.
     """
     return np.array([[TFN(1, 1, 1) for _ in range(size)] for _ in range(size)])
+
+def calculate_consistency_ratio(tfn_matrix):
+    """
+    Calculates the Consistency Ratio (CR) of a fuzzy pairwise comparison matrix.
+
+    This function converts a matrix of Triangular Fuzzy Numbers (TFNs) into a crisp matrix
+    using mean defuzzification, then computes the maximum eigenvalue (λ_max) to assess
+    the consistency of the matrix using Saaty's Consistency Index (CI) and the corresponding
+    Random Index (RI) for the given matrix size.
+
+    The Consistency Ratio (CR) is used to determine whether the pairwise comparisons are
+    consistent enough to be reliable. A CR ≤ 0.1 is generally considered acceptable.
+    """
+    n = len(tfn_matrix)
+    crisp_matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            tfn = tfn_matrix[i][j]
+            crisp_matrix[i][j] = utils.mean_defuzzification(np.array([tfn.l, tfn.m, tfn.u]))
+
+    eigvals, _ = np.linalg.eig(crisp_matrix)
+    lambda_max = np.max(np.real(eigvals))
+    CI = (lambda_max - n) / (n - 1)
+
+    RI_table = {
+        1: 0.00, 2: 0.00, 3: 0.58, 4: 0.90, 5: 1.12,
+        6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49
+    }
+    RI = RI_table.get(n, 1.49)
+    return CI / RI if RI != 0 else 0
+
+# -------------------------------
+# 3. Trust Simulation
+# -------------------------------
+
+def invert_polarity(evidence: np.ndarray, polarity_flags: list) -> np.ndarray:
+    """
+    Inverts evidence dimensions where higher values indicate better behavior,
+    so that all dimensions align with the intuition: higher = more suspicious.
+    """
+    modified = evidence.copy()
+    for idx, invert in enumerate(polarity_flags):
+        if invert:
+            max_val = np.max(modified[:, idx])
+            min_val = np.min(modified[:, idx])
+            modified[:, idx] = (max_val + min_val) - modified[:, idx]
+    return modified
 
 def generate_beta_evidence_custom(alpha, beta):
     """
@@ -132,10 +194,10 @@ if __name__ == "__main__":
     initial_trust_map = {s["subject_id"]: s["trust_value"] for s in subjects}
 
     # Create default TFN matrices
-    perf = create_dummy_fuzzy_matrix(6)
-    reli = create_dummy_fuzzy_matrix(4)
-    sec = create_dummy_fuzzy_matrix(8)
-    crit = create_dummy_fuzzy_matrix(3)
+    perf = create_uniform_matrix(6)
+    reli = create_uniform_matrix(4)
+    sec = create_uniform_matrix(8)
+    crit = create_uniform_matrix(3)
 
     global_weights = np.concatenate([
         compute_final_weights(compute_synthetic_extents(perf)) * compute_final_weights(compute_synthetic_extents(crit))[0],
@@ -163,16 +225,22 @@ if __name__ == "__main__":
     print(f"  Avg Increased Trust:            {np.mean(increased) if increased else 0:.4f}")
     print(f"  Avg Decreased Trust:            {np.mean(decreased) if decreased else 0:.4f}")
 
-    # Plot trust evolution visualisation - optional
+    # Save trust evolution plot
+    FIGS_DIR = ROOT / "plots"
+    FIGS_DIR.mkdir(parents=True, exist_ok=True)
+
     plt.figure(figsize=(10, 6))
     for i, (sid, history) in enumerate(trust_records.items()):
         if i >= 100:
             break
         plt.plot(history, alpha=0.2)
-    plt.title("Trust Evolution for 100 Subjects (Random α, β between [1.5, 6])")
+    plt.title("Trust Evolution for 100 Subjects")
     plt.xlabel("Month")
     plt.ylabel("Trust Value")
     plt.ylim(0, 1)
     plt.xlim(0, 12)
     plt.tight_layout()
-    plt.show()
+
+    output_path = FIGS_DIR / "trust_evolution_random.png"
+    plt.savefig(output_path, dpi=300)
+    print(f"Saved trust evolution plot to {output_path}")

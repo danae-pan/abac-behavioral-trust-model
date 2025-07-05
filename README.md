@@ -13,6 +13,8 @@ This project implements a trust-aware extension of ABAC for insider threat detec
 
 Rather than generating honey attributes, the framework assumes their existence and uses interactions with them as behavioral evidence. These interactions influence both user trust and attribute sensitivity, enabling more risk-aware and adaptive access decisions.
 
+To support experimentation, diverse behavioral scenarios are simulated using Beta-distributed evidence, profile-based trust decay, and FAHP weight configurations, generating visual and quantitative trust trajectories across subjects.
+
 
 ---
 
@@ -29,7 +31,9 @@ src/
 │   └── appendix/               # Supplementary experiments for thesis appendix
 ├── datasets/
 │   └── raw_csv/               # Sample NCES files to bootstrap pipeline
-│   └── processed/             # Auto-generated data (subjects, objects, trust, sensitivity)
+│   └── processed/             # Auto-generated data (subjects, objects, trust,
+ sensitivity)
+├── plots/                      # Automatically saved visualizations from trust and evaluation experiments
 ├── README.md
 └── requirements.txt
 ```
@@ -66,6 +70,8 @@ python src/dataset_generator/get_data.py
 python src/dataset_generator/merge_data.py
 python src/dataset_generator/subject.py
 python src/dataset_generator/object.py
+python src/dataset_generator/generate_attack_subjects.py
+python src/dataset_generator/generate_attack_objects,py
 ```
 
 ### 2. Request building
@@ -73,9 +79,10 @@ python src/dataset_generator/object.py
 python src/request_builder/request.py
 ```
 
-### 3. Trust simulation (default FAHP setup)
+### 3. Trust simulation (default FAHP setup and insider attack scenario).
 ```bash
 python src/trust_estimator/trustfahp-default.py
+python src/trust_estimator/trustfahp-insiderattack.py
 ```
 
 ### 4. Sensitivity analysis
@@ -94,10 +101,17 @@ python src/sensitivity_estimator/sensitivity.py
     python src/evaluation/main/exp1_attribute_diagnostics.py
     python src/evaluation/main/exp2_risk_evaluation.py
     ```
-
-- **Exp3 and Exp4** must be run using `-m` due to internal module imports:
+- Part of **Exp3** runs standalone, and needs to be run first:
     ```bash
-    python -m evaluation.main.exp3_trust_variation
+    python src/evaluation/main/exp3_target_objects.py
+    ```
+    and another part using `-m` due to internal module imports:
+    ```bash
+    python src/evaluation/main/exp3_insider_attack.py
+    python src/evaluation/main/exp3_trust_variation.py
+    ```
+- **Exp4** must also be run using `-m`:
+    ```bash
     python -m evaluation.main.exp4_action_thresholds
     ```
 
@@ -106,9 +120,11 @@ python src/sensitivity_estimator/sensitivity.py
 These are standalone and can be run directly:
 
 ```bash
-python src/evaluation/appendix/trustfahp-gamma.py
-python src/evaluation/appendix/trustfahp-betadistro.py
-python src/evaluation/appendix/trustfahp-tfns.py
+python src/evaluation/appendix/trustfahp-gamma.py          
+python src/evaluation/appendix/trustfahp-betadistro.py     
+python src/evaluation/appendix/trustfahp-tfns.py           
+python src/evaluation/appendix/trustfahp-evidencedistro.py 
+
 ```
 
 ---
@@ -121,12 +137,14 @@ python src/evaluation/appendix/trustfahp-tfns.py
 - Public educational data used for dataset generation can be retrieved via the [NCES Table Generator](https://nces.ed.gov/ccd/elsi/tableGenerator.aspx). This project used:
   - **State-level staffing data** (2023–2024): used to estimate administrative staff counts by role and region.
   - **School-level data** (2023–2024): including district, county, school name, and enrollment size.
+- The insider simulation follows the CERT model of IP theft, specifically the entitled individual focusing on a privileged student preparing to resign.
+Trust is recalculated weekly over a two-month period, one month before and one after resignation, using FAHP, based on behavioral evidence (e.g., remote access, throughput, deception access).
 
 ---
 
 ## Acknowledgements
 
-This project relies on the following open-source libraries:
+This project uses the following open-source libraries:
 
 - [`py-abac`](https://github.com/ketgo/py-abac) — Attribute-Based Access Control engine used for policy parsing and enforcement
 - [`pyfdm`](https://github.com/jwieckowski/pyfdm) — Fuzzy decision-making framework used for fuzzy operations on the trust simulation

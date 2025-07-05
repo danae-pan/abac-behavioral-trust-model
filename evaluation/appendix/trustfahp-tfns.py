@@ -3,15 +3,33 @@ from pyfdm.TFN import TFN
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+"""
+trustfahp-tfns.py
+
+Compares the impact of different outer-layer FAHP criteria matrices on the final 
+global category weights (performance, reliability, security). Each scenario (performance-
+dominant, security-dominant, balanced) affects how much weight each evidence category 
+receives in the final trust computation.
+
+Outputs:
+- plots/global_category_weight_comparison.png: bar plot comparing category weights across scenarios
+"""
+
 # ----------------------
-# 1. Helper Functions
+# 1. FAHP Utilities
 # ----------------------
 def compute_synthetic_extents(matrix):
+    """
+    Computes fuzzy synthetic extent values from a fuzzy pairwise comparison matrix.
+    """
     row_sums = [sum(matrix[i, :], start=TFN(0, 0, 0)) for i in range(matrix.shape[0])]
     total_sum = sum(row_sums, start=TFN(0, 0, 0))
     return [r / total_sum for r in row_sums]
 
 def possibility_degree(m2: TFN, m1: TFN) -> float:
+    """
+    Computes the possibility degree that fuzzy number m2 ≥ m1.
+    """
     if m2.b >= m1.b:
         return 1.0
     elif m1.a >= m2.c:
@@ -20,6 +38,9 @@ def possibility_degree(m2: TFN, m1: TFN) -> float:
         return (m1.a - m2.c) / ((m2.b - m2.c) - (m1.b - m1.a))
 
 def compute_final_weights(synthetic_extents):
+    """
+    Computes crisp weights from fuzzy synthetic extents using the minimum possibility method.
+    """
     n = len(synthetic_extents)
     V = np.zeros((n, n))
     for i in range(n):
@@ -30,12 +51,20 @@ def compute_final_weights(synthetic_extents):
     return d_prime / np.sum(d_prime)
 
 def create_uniform_matrix(size):
+    """
+    Creates a size×size identity fuzzy matrix filled with TFN(1,1,1).
+    Used to generate equal weights when no specific pairwise comparisons are provided.
+    """
     return np.array([[TFN(1, 1, 1) for _ in range(size)] for _ in range(size)])
 
 # ----------------------
-# 2. TFN Scenarios (Moderated)
+# 2. FAHP Criteria Scenarios
 # ----------------------
 def create_criteria_matrix(scenario):
+    """
+    Define outer-layer FAHP criteria matrices for each scenario.
+    Returns a 3x3 TFN matrix prioritizing one category.
+    """
     if scenario == "performance":
         return np.array([
             [TFN(1, 1, 1), TFN(2, 3, 4), TFN(1, 2, 3)],
@@ -52,7 +81,7 @@ def create_criteria_matrix(scenario):
         return create_uniform_matrix(3)
 
 # ----------------------
-# 3. Execution
+# 3. Weight Computation
 # ----------------------
 scenarios = ["performance", "balanced", "security"]
 category_indices = {
@@ -102,4 +131,10 @@ ax.set_xticks(x + width)
 ax.set_xticklabels(labels)
 ax.legend()
 plt.tight_layout()
-plt.show()
+
+ROOT = Path(__file__).resolve().parents[2]
+PLOTS_DIR = ROOT / "plots"
+PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+plot_path = PLOTS_DIR / "global_category_weight_comparison.png"
+plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+print(f"Saved plot to: {plot_path}")

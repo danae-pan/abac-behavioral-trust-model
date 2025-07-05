@@ -3,6 +3,24 @@ import random
 from collections import defaultdict, Counter
 from pathlib import Path
 
+"""
+request.py
+
+Generates ABAC access requests based on subject and object datasets.
+Subjects and objects are grouped by district, and requests are created
+by selecting valid or invalid subject-object-action combinations based
+on predefined role and object-type constraints.
+
+Usage:
+- Expects preprocessed datasets for subjects and objects.
+- Generates realistic ABAC access requests for policy evaluation.
+- Outputs access_requests.json containing subject-resource-action triplets.
+
+Outputs:
+- datasets/processed/access_requests.json
+- Console summary of request distribution by role and object type.
+"""
+
 # ----------------------
 # Configuration
 # ----------------------
@@ -64,6 +82,23 @@ role_object_scope = {
 # Request Generation Function
 # ----------------------
 def generate_requests_same_district(max_requests=MAX_REQUESTS, invalid_ratio=INVALID_RATIO):
+    """
+    Generates ABAC access requests from subjects and objects within the same district.
+
+    For each request:
+    - A subject is selected based on their district.
+    - A resource object is selected from the same district.
+    - An action is assigned based on valid role-object mappings.
+    - With probability `invalid_ratio`, an invalid object type is chosen.
+
+    Parameters:
+    - max_requests (int): Total number of requests to generate.
+    - invalid_ratio (float): Proportion of requests that should be policy-invalid.
+
+    Returns:
+    - List[dict]: A list of ABAC access request dictionaries.
+    """
+    
     requests = []
     attempts = 0
     max_attempts = max_requests * 5
@@ -124,9 +159,7 @@ def generate_requests_same_district(max_requests=MAX_REQUESTS, invalid_ratio=INV
 
     return requests
 
-# ----------------------
-# Generate and Save
-# ----------------------
+# -------------------- ENTRY POINT --------------------
 if __name__ == "__main__":
     all_requests = generate_requests_same_district()
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:

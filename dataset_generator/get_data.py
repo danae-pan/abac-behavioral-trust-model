@@ -1,7 +1,18 @@
 import csv
 import json
-import os
 from pathlib import Path
+
+"""
+get_data.py
+
+Parses a school-level CSV dataset downloaded from the NCES ELSI table generator and extracts
+relevant fields such as school name, district, county, student/teacher count, and ratio.
+Outputs a cleaned JSON file that can be used for synthetic subject generation in ABAC modeling.
+
+Usage:
+  - Expects input file in datasets/raw_csv/nces_schools_2023-2024.csv
+  - Produces output JSON in datasets/processed/schools_data.json
+"""
 
 def extract_school_data(input_csv: str, output_json: str):
     """
@@ -10,18 +21,15 @@ def extract_school_data(input_csv: str, output_json: str):
     """
     schools = []
 
-    if not os.path.exists(input_csv):
+    if not Path(input_csv).exists():
         print(f"Input file not found: {input_csv}")
         return
 
     with open(input_csv, newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
-        headers = reader.fieldnames
-        print("Detected CSV headers:", headers)
 
         for idx, row in enumerate(reader, 1):
             try:
-                # Find actual column names containing these keywords
                 total_students_key = next(k for k in row if "Total Students" in k)
                 total_teachers_key = next(k for k in row if "Total Teachers" in k)
                 ratio_key = next(k for k in row if "Pupil/Teacher Ratio" in k)
@@ -52,9 +60,9 @@ def extract_school_data(input_csv: str, output_json: str):
 
     print(f"Saved {len(schools)} schools to {output_json}")
 
-
+# -------------------- ENTRY POINT --------------------
 if __name__ == "__main__":
-    ROOT_DIR = Path(__file__).resolve().parents[1]  # points to 'src/'
+    ROOT_DIR = Path(__file__).resolve().parents[1] 
     INPUT = ROOT_DIR / "datasets" / "raw_csv" / "nces_schools_2023-2024.csv"
     OUTPUT = ROOT_DIR / "datasets" / "processed" / "schools_data.json"
 

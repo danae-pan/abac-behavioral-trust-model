@@ -3,6 +3,26 @@ import random
 from faker import Faker
 from pathlib import Path
 
+"""
+subject.py
+
+Generates synthetic ABAC subjects (Admins, Teachers, Students) using NCES-derived
+school and state data. Subjects are assigned realistic attributes such as district,
+school, course, and class affiliations.
+
+This script scales the number of admins and teachers per school based on state-level
+staffing ratios (admin count and pupil-teacher ratio), and fills each school with the
+correct number of students. Each subject receives role-specific attributes aligned with
+their school and regional structure.
+
+Inputs:
+- datasets/processed/schools_by_state.json
+- datasets/processed/state_admins_summary.json
+
+Output:
+- datasets/processed/all_subjects.json
+"""
+
 fake = Faker()
 
 CLASS_IDS = [f"CLS{str(i).zfill(5)}" for i in range(1, 1001)]
@@ -130,7 +150,7 @@ def generate_subjects_for_school(school, total_admins_state, total_students_stat
 
     return subjects
 
-
+# -------------------- ENTRY POINT --------------------
 if __name__ == "__main__":
     ROOT_DIR = Path(__file__).resolve().parents[1]
 

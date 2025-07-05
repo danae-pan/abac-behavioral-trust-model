@@ -1,7 +1,20 @@
 import csv
 import json
-import os
 from pathlib import Path
+
+"""
+build_state_admins.py
+
+Parses a state-level staff statistics CSV file from the NCES dataset to compute:
+- Total administrator staff count per state (LEA + school level, including support staff)
+- Pupil-teacher ratio per state
+
+Outputs a JSON summary used for generating realistic administrator distributions
+in educational ABAC simulations.
+
+Expected input: datasets/raw_csv/nces_staff_statewise_2023_2024.csv
+Output written to: datasets/processed/state_admins_summary.json
+"""
 
 def extract_admin_summary(input_csv: str, output_json: str):
     """
@@ -10,7 +23,7 @@ def extract_admin_summary(input_csv: str, output_json: str):
     """
     states_data = []
 
-    if not os.path.exists(input_csv):
+    if not Path(input_csv).exists():
         print(f"Input file not found: {input_csv}")
         return
 
@@ -43,10 +56,12 @@ def extract_admin_summary(input_csv: str, output_json: str):
 
     print(f"Saved {len(states_data)} states to {output_json}")
 
+
+# -------------------- ENTRY POINT --------------------
 if __name__ == "__main__":
-    ROOT_DIR = Path(__file__).resolve().parents[1]  # Points to 'src/'
+    ROOT_DIR = Path(__file__).resolve().parents[1] 
     INPUT = ROOT_DIR / "datasets" / "raw_csv" / "nces_staff_statewise_2023_2024.csv"
     OUTPUT = ROOT_DIR / "datasets" / "processed" / "state_admins_summary.json"
 
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)  # ensure folder exists
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)  
     extract_admin_summary(INPUT, OUTPUT)

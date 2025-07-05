@@ -5,6 +5,31 @@ from collections import defaultdict
 from faker import Faker
 from pathlib import Path
 
+"""
+object.py
+
+Generates a collection of ABAC-compatible objects (e.g., assignments, materials, enrollments)
+for each school based on subject distribution. Each object includes metadata such as
+school, district, and county identifiers and is assigned additional attributes based on
+its type (e.g., enrollment limits, course codes, timestamps).
+
+The object types include:
+- course assignment
+- course material
+- course enrollment
+- student enrollment
+- student records
+
+Each school receives a number of objects proportional to its subject population, with
+weighted emphasis on more common object types.
+
+Input:
+- datasets/processed/all_subjects.json
+
+Output:
+- datasets/processed/all_objects.json
+"""
+
 fake = Faker()
 
 # Configuration
@@ -88,6 +113,7 @@ def generate_objects_for_school(school_code, subjects, scale_factor=0.2):
 
     return objects
 
+# -------------------- ENTRY POINT --------------------
 if __name__ == "__main__":
     ROOT = Path(__file__).resolve().parents[1]  # Points to 'src'
     INPUT = ROOT / "datasets" / "processed" / "all_subjects.json"
@@ -116,4 +142,3 @@ if __name__ == "__main__":
         json.dump(all_objects, f, indent=2, ensure_ascii=False)
 
     print(f"Generated {len(all_objects)} objects across {len(subjects_by_school)} schools.")
-    print(f"Output saved to: {OUTPUT}")

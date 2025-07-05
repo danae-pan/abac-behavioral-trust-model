@@ -1,3 +1,19 @@
+"""
+exp2_risk_evaluation.py
+
+Performs a simple risk scoring per attribute based on:
+- Likelihood: how often the attribute appears in access requests
+- Impact: severity of the actions it enables, mapped via trust thresholds
+
+Usage:
+- Requires prior sensitivity diagnostics (`experiment1_attr_summary.csv`)
+- Uses access requests and policy rules to determine attribute usage
+
+Outputs:
+- Printed ranked risk scores
+- Saves results to: datasets/processed/sensitivity_results/exp2_risk_scores.csv
+"""
+
 import json
 import pandas as pd
 from collections import defaultdict
@@ -11,6 +27,7 @@ REQ_PATH = BASE / "datasets" / "processed" / "access_requests.json"
 POLICY_PATH = BASE / "request_builder" / "policy.json"
 SENS_FLAT_PATH = BASE / "datasets" / "processed" / "sensitivity_results" / "sensitivity_flat.csv"
 EXP1_SUMMARY_PATH = BASE / "datasets" / "processed" / "sensitivity_results" / "diagnostics" / "experiment1_attr_summary.csv"
+OUTPUT_PATH = BASE / "datasets" / "processed" / "sensitivity_results" / "exp2_risk_scores.csv"
 
 # ----------------------
 # Load data
@@ -20,18 +37,14 @@ with open(REQ_PATH) as f:
 
 flat_df = pd.read_csv(SENS_FLAT_PATH)
 exp1_df = pd.read_csv(EXP1_SUMMARY_PATH)
+exp1_df.rename(columns={"request_frequency": "request_count", "unique_object_count": "object_count"}, inplace=True)
 
-exp1_df.rename(columns={
-    "request_frequency": "request_count",
-    "unique_object_count": "object_count"
-}, inplace=True)
-
-# ----------------------
-# Load policy set and extract attribute usage matrix
-# ----------------------
 with open(POLICY_PATH) as f:
     policies = json.load(f)["policies"]
 
+# ----------------------
+# Build policy matrix
+# ----------------------
 policy_matrix = defaultdict(lambda: defaultdict(set))
 for p in policies:
     rules = p["rules"]
@@ -43,31 +56,33 @@ for p in policies:
             for method in methods:
                 policy_matrix[obj_type][method].add(attr)
 
-# ----------------------
-# Count attribute usage across actions
-# ----------------------
+# -------------------------------------
+# Count attribute/action occurrences
+# -------------------------------------
 attr_action_counts = defaultdict(lambda: defaultdict(int))
-attr_total_counts = defaultdict(int)
-
 for req in access_requests:
     action = req["action"]["attributes"]["method"]
     res_attrs = req["resource"]["attributes"]
     obj_type = res_attrs.get("obj_type")
-
     valid_attrs = policy_matrix.get(obj_type, {}).get(action, set())
     for attr in valid_attrs:
         if res_attrs.get(attr) is not None:
             attr_action_counts[attr][action] += 1
-            attr_total_counts[attr] += 1
 
-# ----------------------
-# Count object appearances per attribute
-# ----------------------
-attr_object_counts = flat_df.groupby("attribute")["object_id"].nunique().to_dict()
+# -------------------------------------
+# Trust threshold → severity mapping
+# -------------------------------------
+"""
+This dictionary maps each action to a corresponding minimum trust threshold,
+which is then used to infer the severity of the action:
 
-# ----------------------
-# Define trust thresholds → severity levels
-# ----------------------
+- Trust ≥ 0.9 → severity 3 (high)
+- Trust ≥ 0.7 → severity 2 (medium)
+- Else         → severity 1 (low)
+
+Severity is then combined with attribute usage frequency to calculate an overall risk score.
+"""
+
 action_trust_map = {
     "view": 0.5,
     "access": 0.7,
@@ -78,14 +93,15 @@ action_trust_map = {
 }
 
 # ----------------------
-# Risk Calculation
+# Risk scoring
 # ----------------------
 results = []
-
 for attr in attr_action_counts:
-    request_count = exp1_df.loc[exp1_df["attribute"] == attr, "request_count"].values[0]
-    object_count = exp1_df.loc[exp1_df["attribute"] == attr, "object_count"].values[0]
-
+    row = exp1_df[exp1_df["attribute"] == attr]
+    if row.empty:
+        continue
+    request_count = row["request_count"].values[0]
+    object_count = row["object_count"].values[0]
     likelihood = request_count / object_count if object_count > 0 else 0
 
     total_weighted_severity = 0
@@ -110,5 +126,8 @@ for attr in attr_action_counts:
 # Output
 # ----------------------
 risk_df = pd.DataFrame(results).sort_values("risk", ascending=False)
-print("\n[+] Risk Evaluation Summary")
+risk_df.to_csv(OUTPUT_PATH, index=False)
+
+print("\nRisk Evaluation Summary")
 print(risk_df.to_string(index=False))
+print(f"\n Saved to: {OUTPUT_PATH}")

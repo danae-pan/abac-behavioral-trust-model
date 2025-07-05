@@ -9,6 +9,26 @@ from py_abac.storage.memory import MemoryStorage
 import pandas as pd
 from pathlib import Path
 
+"""
+sensitivity.py
+
+Evaluates object- and attribute-level sensitivity based on ABAC policy decisions.
+Sensitivity is computed using access request outcomes (allowed/denied) and the
+relative contribution of each resource attribute per policy. Supports RMS-based
+scoring and generates CSV and JSON summaries for downstream analysis.
+
+Usage:
+- Expects processed access requests and policy definitions.
+- Outputs detailed sensitivity scores, summaries, and denial rates to disk.
+
+Outputs:
+- final_sensitivity.json: includes threshold, average, and attribute scores.
+- sensitivity_flat.csv: per-object, per-attribute breakdown.
+- sensitivity_attribute_summary.csv: mean/std/count per attribute.
+- denial_rate_summary.csv: total allowed/denied counts and denial rates.
+
+"""
+
 # Cache for quick log value lookup (avoids computing -log repeatedly)
 LOG_CACHE = np.array([-math.log(i / 1000) if i else 25.0 for i in range(1001)], dtype=np.float32)
 
@@ -58,11 +78,6 @@ def compute_policy_matrix(policies, policy_attrs):
                 attr_path[2:] for attr_path, rule in rules.resource.items()
                 if attr_path.startswith("$.") and attr_path[2:] in policy_attrs
             ]
-
-            print(f"Policy UID: {p.uid}")
-            print(f"→ obj_type: {obj_type}")
-            print(f"→ actions: {actions}")
-            print(f"→ resource attributes used in policy: {resource_attrs}")
 
             for action in actions:
                 if obj_type and action:
@@ -181,8 +196,6 @@ def main():
         storage.add(Policy.from_json(p))
 
     policy_attrs = extract_policy_resource_attributes(policy_data)
-    print("Extracted Policy Attributes:")
-    print(policy_attrs)
 
     with open(REQUESTS_PATH, encoding="utf-8") as f:
         access_requests = json.load(f)
